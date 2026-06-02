@@ -16,8 +16,11 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+print("BOT STARTING...")
 
 TOKEN = os.environ.get("BOT_TOKEN")
+
+print("TOKEN:", TOKEN)
 GROUP_ID = -1003960275515  # ID del gruppo
 
 # memoria temporanea (NO DB)
