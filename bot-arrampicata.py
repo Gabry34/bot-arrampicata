@@ -41,7 +41,7 @@ GROUPS = {
         "tipi_emoji": ["🌲", "⛰", "🗻", "❄️", "🚶"],
     },
     "ferrata": {
-        "id": -5186985733,         # <-- sostituisci con l'ID reale
+        "id": -1003941922329,         # <-- sostituisci con l'ID reale
         "label": "🪢 Via Ferrata",
         "emoji": "🪢",
         "tipi": ["Ferrata Facile (F)", "Ferrata Media (MD)", "Ferrata Difficile (D)", "Ferrata Molto Difficile (ED)"],
