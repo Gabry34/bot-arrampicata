@@ -1,8 +1,7 @@
 import re
 import os
-import random
 import string
-from datetime import datetime
+import random
 
 from telegram import (
     Update,
@@ -19,11 +18,11 @@ from telegram.ext import (
     filters,
 )
 
-print("START OK")
+print("BOT START")
 
 TOKEN = os.environ.get("BOT_TOKEN")
 if not TOKEN:
-    print("❌ BOT_TOKEN non trovato")
+    print("NO TOKEN")
     exit()
 
 GROUP_ID = -1004213527185
@@ -31,11 +30,9 @@ GROUP_ID = -1004213527185
 pending = {}
 events = {}
 
-# STATES
 LUOGO, REGIONE, DATA, TIPO, LIVELLO, POSTI = range(6)
 
-
-# ---------------- REGIONE KEYBOARD ---------------- #
+# ---------------- REGIONI ---------------- #
 
 REGIONI_KEYBOARD = InlineKeyboardMarkup([
     [
@@ -52,98 +49,70 @@ REGIONI_KEYBOARD = InlineKeyboardMarkup([
     ],
 ])
 
-
-# ---------------- UTILS ---------------- #
-
-def check_date(date_str):
-    try:
-        d = datetime.strptime(date_str, "%d/%m/%Y")
-        return d >= datetime.now()
-    except:
-        return False
-
+# ---------------- TEXT ---------------- #
 
 def build_text(e):
     return (
-        f"ID: {''.join(random.choices(string.digits, k=5))}\n\n"
         f"🧗 NUOVA USCITA\n\n"
         f"📍 {e['luogo']}\n"
         f"🌍 #{e['regione'].replace(' ', '')}\n"
         f"🧗 #{e['tipo']}\n\n"
         f"📅 {e['data']}\n"
-        f"📈 {e['livello']}\n"
-        f"👥 {e['posti']} posti\n\n"
-        f"👤 Organizzatore: {e['creator_name']}\n\n"
-        f"⚠️ Contatta l’organizzatore per partecipare"
+        f"📈 {e['livello']}\n\n"
+        f"👥 {len(e['partecipanti'])}/{e['posti_totali']} partecipanti\n\n"
+        f"👤 {e['creator_name']}\n\n"
+        f"⚠️ Clicca per partecipare"
     )
 
+# ---------------- KEYBOARD ---------------- #
 
 def keyboard(event_id):
-    e = events[event_id]
-    username = e["creator_username"]
-
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton(
-                "📩 Contatta",
-                url=f"https://t.me/{username}" if username != "no_username" else "https://t.me"
-            )
+            InlineKeyboardButton("👋 Partecipa", callback_data=f"join_{event_id}"),
+            InlineKeyboardButton("❌ Esci", callback_data=f"leave_{event_id}")
         ],
         [
-            InlineKeyboardButton("✅ Al completo", callback_data=f"full_{event_id}"),
-            InlineKeyboardButton("❌ Annulla", callback_data=f"cancel_{event_id}")
+            InlineKeyboardButton("✏️ Aggiorna posti", callback_data=f"update_{event_id}")
         ]
     ])
 
-
-# ---------------- START ---------------- #
+# ---------------- FLOW ---------------- #
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Benvenuto 🧗\nUsa /uscita per creare una nuova uscita."
-    )
-
-
-# ---------------- FLOW ---------------- #
+    await update.message.reply_text("Usa /uscita")
 
 async def uscita(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pending[update.effective_user.id] = {}
-    await update.message.reply_text("📍 Dove vuoi arrampicare?")
+    await update.message.reply_text("📍 Dove vai?")
     return LUOGO
-
 
 async def luogo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pending[update.effective_user.id]["luogo"] = update.message.text
 
     await update.message.reply_text(
-        "🌍 Seleziona la regione:",
+        "🌍 Regione:",
         reply_markup=REGIONI_KEYBOARD
     )
     return REGIONE
 
-
 async def regione(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+    q = update.callback_query
+    await q.answer()
 
-    pending[query.from_user.id]["regione"] = query.data
+    pending[q.from_user.id]["regione"] = q.data
 
-    await query.message.reply_text("📅 Data (GG/MM/AAAA)?")
+    await q.message.reply_text("📅 Data (GG/MM/AAAA)?")
     return DATA
-
 
 async def data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not re.match(r"\d{2}/\d{2}/\d{4}", update.message.text):
-        await update.message.reply_text("❌ Formato GG/MM/AAAA")
-        return DATA
-
-    if not check_date(update.message.text):
-        await update.message.reply_text("❌ Data non valida")
+        await update.message.reply_text("Formato errato")
         return DATA
 
     pending[update.effective_user.id]["data"] = update.message.text
 
-    keyboard = [
+    kb = [
         [
             InlineKeyboardButton("Falesia", callback_data="Falesia"),
             InlineKeyboardButton("Multipitch", callback_data="Multipitch"),
@@ -155,54 +124,65 @@ async def data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_text(
-        "🧗 Seleziona il tipo:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        "🧗 Tipo:",
+        reply_markup=InlineKeyboardMarkup(kb)
     )
-
     return TIPO
 
-
 async def tipo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+    q = update.callback_query
+    await q.answer()
 
-    pending[query.from_user.id]["tipo"] = query.data
+    pending[q.from_user.id]["tipo"] = q.data
 
-    await query.message.reply_text("📈 Livello (es. 6a-6b):")
+    await q.message.reply_text("📈 Livello?")
     return LIVELLO
-
 
 async def livello(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pending[update.effective_user.id]["livello"] = update.message.text
-    await update.message.reply_text("👥 Quanti posti?")
+    await update.message.reply_text("👥 Posti?")
     return POSTI
-
 
 async def posti(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     data = pending[user.id]
 
-    data["posti"] = update.message.text
+    data["posti_totali"] = int(data["posti"])
+    data["partecipanti"] = []
+
     data["creator_id"] = user.id
     data["creator_name"] = user.first_name
-    data["creator_username"] = user.username if user.username else "no_username"
+    data["creator_username"] = user.username or "no_username"
 
     event_id = str(len(events) + 1)
-    events[event_id] = data
 
-    await context.bot.send_message(
+    msg = await context.bot.send_message(
         chat_id=GROUP_ID,
         text=build_text(data),
         reply_markup=keyboard(event_id)
     )
 
+    data["message_id"] = msg.message_id
+    events[event_id] = data
+
     del pending[user.id]
 
-    await update.message.reply_text("✅ Uscita pubblicata!")
+    await update.message.reply_text("✅ Pubblicato")
     return ConversationHandler.END
 
+# ---------------- UPDATE SYSTEM ---------------- #
 
-# ---------------- CALLBACK BUTTONS ---------------- #
+async def update_event(context, query, event_id):
+    e = events[event_id]
+
+    await context.bot.edit_message_text(
+        chat_id=GROUP_ID,
+        message_id=e["message_id"],
+        text=build_text(e),
+        reply_markup=keyboard(event_id)
+    )
+
+# ---------------- CALLBACK ---------------- #
 
 async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -212,26 +192,63 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     event = events.get(event_id)
 
     if not event:
-        await q.edit_message_text("❌ Evento non trovato")
         return
 
     user_id = q.from_user.id
 
-    if action == "cancel":
-        if user_id != event["creator_id"]:
-            await q.answer("Solo creatore", show_alert=True)
+    # JOIN
+    if action == "join":
+        if user_id in event["partecipanti"]:
+            await q.answer("Sei già dentro", show_alert=True)
             return
 
-        await q.edit_message_text("🚫 ANNULLATO")
-        del events[event_id]
-
-    elif action == "full":
-        if user_id != event["creator_id"]:
-            await q.answer("Solo creatore", show_alert=True)
+        if len(event["partecipanti"]) >= event["posti_totali"]:
+            await q.answer("Evento pieno", show_alert=True)
             return
 
-        await q.edit_message_text("🔴 AL COMPLETO")
+        event["partecipanti"].append(user_id)
 
+    # LEAVE
+    elif action == "leave":
+        if user_id in event["partecipanti"]:
+            event["partecipanti"].remove(user_id)
+
+    # UPDATE POSTI
+    elif action == "update":
+        if user_id != event["creator_id"]:
+            await q.answer("Solo creator", show_alert=True)
+            return
+
+        context.user_data["update_event"] = event_id
+        await q.message.reply_text("✏️ Nuovo numero posti:")
+        return
+
+    await update_event(context, q, event_id)
+
+# ---------------- UPDATE POSTI ---------------- #
+
+async def update_posti(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    event_id = context.user_data.get("update_event")
+    if not event_id:
+        return
+
+    if not update.message.text.isdigit():
+        await update.message.reply_text("Numero non valido")
+        return
+
+    event = events[event_id]
+    event["posti_totali"] = int(update.message.text)
+
+    await context.bot.edit_message_text(
+        chat_id=GROUP_ID,
+        message_id=event["message_id"],
+        text=build_text(event),
+        reply_markup=keyboard(event_id)
+    )
+
+    context.user_data.pop("update_event")
+
+    await update.message.reply_text("✅ Aggiornato")
 
 # ---------------- MAIN ---------------- #
 
@@ -241,12 +258,12 @@ def main():
     conv = ConversationHandler(
         entry_points=[CommandHandler("uscita", uscita)],
         states={
-            LUOGO: [MessageHandler(filters.TEXT & ~filters.COMMAND, luogo)],
+            LUOGO: [MessageHandler(filters.TEXT, luogo)],
             REGIONE: [CallbackQueryHandler(regione)],
-            DATA: [MessageHandler(filters.TEXT & ~filters.COMMAND, data)],
+            DATA: [MessageHandler(filters.TEXT, data)],
             TIPO: [CallbackQueryHandler(tipo)],
-            LIVELLO: [MessageHandler(filters.TEXT & ~filters.COMMAND, livello)],
-            POSTI: [MessageHandler(filters.TEXT & ~filters.COMMAND, posti)],
+            LIVELLO: [MessageHandler(filters.TEXT, livello)],
+            POSTI: [MessageHandler(filters.TEXT, posti)],
         },
         fallbacks=[]
     )
@@ -254,10 +271,10 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(buttons))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, update_posti))
 
-    print("BOT RUNNING...")
+    print("BOT RUNNING")
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
