@@ -27,7 +27,7 @@ if not TOKEN:
     exit()
 
 print("TOKEN:", TOKEN)
-GROUP_ID = -1003960275515  # ID del gruppo
+GROUP_ID = -1004213527185  # ID del gruppo
 
 # memoria temporanea (NO DB)
 pending = {}
