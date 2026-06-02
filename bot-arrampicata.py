@@ -99,15 +99,21 @@ def build_text(e):
 
 # ---------------- TASTIERA USCITA ---------------- #
 
-def keyboard(event_id):
+def keyboard(event_id, creator_username=None, creator_id=None):
+    # Link diretto all'organizzatore: preferisce username pubblico, altrimenti deep link per ID
+    if creator_username:
+        contact_url = f"https://t.me/{creator_username}"
+    else:
+        contact_url = f"tg://user?id={creator_id}"
+
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("👋 Partecipa", callback_data=f"join_{event_id}"),
             InlineKeyboardButton("❌ Esci",      callback_data=f"leave_{event_id}"),
         ],
         [
-            InlineKeyboardButton("✏️ Aggiorna posti",       callback_data=f"update_{event_id}"),
-            InlineKeyboardButton("🗑 Cancella uscita",      callback_data=f"delete_{event_id}"),
+            InlineKeyboardButton("💬 Contatta organizzatore", url=contact_url),
+            InlineKeyboardButton("🗑 Cancella uscita",        callback_data=f"delete_{event_id}"),
         ],
         [
             InlineKeyboardButton("👥 Gestisci partecipanti", callback_data=f"manage_{event_id}"),
@@ -123,7 +129,7 @@ async def refresh_message(context, event_id):
             chat_id=GROUP_ID,
             message_id=e["message_id"],
             text=build_text(e),
-            reply_markup=keyboard(event_id),
+            reply_markup=keyboard(event_id, e['creator_username'], e['creator_id']),
         )
     except Exception:
         pass  # messaggio già aggiornato o cancellato
@@ -198,7 +204,7 @@ async def posti(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await context.bot.send_message(
         chat_id=GROUP_ID,
         text=build_text(dati),
-        reply_markup=keyboard(event_id),
+        reply_markup=keyboard(event_id, dati['creator_username'], dati['creator_id']),
     )
 
     dati["message_id"] = msg.message_id
@@ -346,18 +352,6 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await refresh_message(context, event_id)
 
-    # UPDATE POSTI (solo creator)
-    elif action == "update":
-        if user.id != event["creator_id"]:
-            await q.answer("Solo il creatore può modificare i posti.", show_alert=True)
-            return
-        context.user_data["update_event"] = event_id
-        await q.message.reply_text(
-            f"✏️ Posti attuali: {event['posti_totali']} "
-            f"(min. {len(event['partecipanti'])} perché ci sono già iscritti).\n"
-            f"Inserisci il nuovo numero di posti:"
-        )
-
     # DELETE (dal messaggio nel gruppo, solo creator)
     elif action == "delete":
         if user.id != event["creator_id"]:
@@ -478,37 +472,6 @@ async def kick_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == "cancelkick":
         await q.edit_message_text("Operazione annullata.")
 
-# ---------------- AGGIORNAMENTO POSTI (messaggio libero) ---------------- #
-
-async def update_posti(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    event_id = context.user_data.get("update_event")
-    if not event_id:
-        return
-
-    testo = update.message.text.strip()
-    if not testo.isdigit():
-        await update.message.reply_text("⚠️ Inserisci un numero valido:")
-        return
-
-    nuovo = int(testo)
-    event = events.get(event_id)
-    if not event:
-        context.user_data.pop("update_event", None)
-        return
-
-    min_posti = len(event["partecipanti"])
-    if nuovo < min_posti:
-        await update.message.reply_text(
-            f"⚠️ Non puoi scendere sotto {min_posti} posti (ci sono già {min_posti} iscritti)."
-        )
-        return
-
-    event["posti_totali"] = nuovo
-    context.user_data.pop("update_event", None)
-
-    await refresh_message(context, event_id)
-    await update.message.reply_text("✅ Posti aggiornati!")
-
 # ---------------- MAIN ---------------- #
 
 def main():
@@ -532,7 +495,6 @@ def main():
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(kick_buttons, pattern=r"^(kick|confirmkick|cancelkick)_"))
     app.add_handler(CallbackQueryHandler(buttons))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, update_posti))
 
     print("BOT RUNNING")
     app.run_polling()
