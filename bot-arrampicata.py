@@ -17,8 +17,9 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
-
+print("START OK")
 TOKEN = os.environ.get("BOT_TOKEN")
+print("TOKEN RAW:", TOKEN)
 if not TOKEN:
     print("❌ BOT_TOKEN non trovato nelle variabili ambiente!")
     exit()
