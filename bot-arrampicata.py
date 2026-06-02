@@ -1,4 +1,3 @@
-
 import re
 import os
 import random
@@ -19,27 +18,42 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+
 print("START OK")
+
 TOKEN = os.environ.get("BOT_TOKEN")
-print("TOKEN RAW:", TOKEN)
 if not TOKEN:
-    print("❌ BOT_TOKEN non trovato nelle variabili ambiente!")
+    print("❌ BOT_TOKEN non trovato")
     exit()
 
-print("TOKEN:", TOKEN)
-GROUP_ID = -1004213527185  # ID del gruppo
+GROUP_ID = -1004213527185
 
-# memoria temporanea (NO DB)
 pending = {}
 events = {}
 
-LUOGO, DATA, TIPO, LIVELLO, POSTI = range(5)
+# STATES
+LUOGO, REGIONE, DATA, TIPO, LIVELLO, POSTI = range(6)
+
+
+# ---------------- REGIONE KEYBOARD ---------------- #
+
+REGIONI_KEYBOARD = InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton("Trentino-Alto Adige", callback_data="Trentino-Alto Adige"),
+        InlineKeyboardButton("Lombardia", callback_data="Lombardia"),
+    ],
+    [
+        InlineKeyboardButton("Veneto", callback_data="Veneto"),
+        InlineKeyboardButton("Piemonte", callback_data="Piemonte"),
+    ],
+    [
+        InlineKeyboardButton("Toscana", callback_data="Toscana"),
+        InlineKeyboardButton("Lazio", callback_data="Lazio"),
+    ],
+])
 
 
 # ---------------- UTILS ---------------- #
-async def get_chat_id(update, context):
-    chat_id = update.effective_chat.id
-    await update.message.reply_text(f"Chat ID: {chat_id}")
 
 def check_date(date_str):
     try:
@@ -51,15 +65,16 @@ def check_date(date_str):
 
 def build_text(e):
     return (
-        f"ID Richiesta: {''.join(random.choices(string.digits, k=5))}\n"
+        f"ID: {''.join(random.choices(string.digits, k=5))}\n\n"
         f"🧗 NUOVA USCITA\n\n"
         f"📍 {e['luogo']}\n"
+        f"🌍 #{e['regione'].replace(' ', '')}\n"
+        f"🧗 #{e['tipo']}\n\n"
         f"📅 {e['data']}\n"
-        f"🧗 {e['tipo']}\n"
         f"📈 {e['livello']}\n"
         f"👥 {e['posti']} posti\n\n"
-        f"👤 Organizzatore: {e['creator_name']}"
-        f"⚠️ Contatta l`organizzatore dell`attività per richiedere di partecipare all`uscita."
+        f"👤 Organizzatore: {e['creator_name']}\n\n"
+        f"⚠️ Contatta l’organizzatore per partecipare"
     )
 
 
@@ -89,7 +104,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# ---------------- CREAZIONE ---------------- #
+# ---------------- FLOW ---------------- #
 
 async def uscita(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pending[update.effective_user.id] = {}
@@ -99,29 +114,43 @@ async def uscita(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def luogo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pending[update.effective_user.id]["luogo"] = update.message.text
-    await update.message.reply_text("📅 Data (GG/MM/AAAA)?")
+
+    await update.message.reply_text(
+        "🌍 Seleziona la regione:",
+        reply_markup=REGIONI_KEYBOARD
+    )
+    return REGIONE
+
+
+async def regione(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    pending[query.from_user.id]["regione"] = query.data
+
+    await query.message.reply_text("📅 Data (GG/MM/AAAA)?")
     return DATA
 
 
 async def data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not re.match(r"\d{2}/\d{2}/\d{4}", update.message.text):
-        await update.message.reply_text("❌ Formato corretto: GG/MM/AAAA")
+        await update.message.reply_text("❌ Formato GG/MM/AAAA")
         return DATA
 
     if not check_date(update.message.text):
-        await update.message.reply_text("❌ Data passata o non valida")
+        await update.message.reply_text("❌ Data non valida")
         return DATA
 
     pending[update.effective_user.id]["data"] = update.message.text
 
     keyboard = [
         [
-            InlineKeyboardButton("🧗 Falesia", callback_data="Falesia"),
-            InlineKeyboardButton("🧗 Multipitch", callback_data="Multipitch"),
+            InlineKeyboardButton("Falesia", callback_data="Falesia"),
+            InlineKeyboardButton("Multipitch", callback_data="Multipitch"),
         ],
         [
-            InlineKeyboardButton("🪨 Boulder", callback_data="Boulder"),
-            InlineKeyboardButton("🏢 Indoor", callback_data="Indoor"),
+            InlineKeyboardButton("Boulder", callback_data="Boulder"),
+            InlineKeyboardButton("Indoor", callback_data="Indoor"),
         ],
     ]
 
@@ -139,7 +168,7 @@ async def tipo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     pending[query.from_user.id]["tipo"] = query.data
 
-    await query.message.reply_text("📈 Livello richiesto (es. 6a-6b):")
+    await query.message.reply_text("📈 Livello (es. 6a-6b):")
     return LIVELLO
 
 
@@ -161,21 +190,19 @@ async def posti(update: Update, context: ContextTypes.DEFAULT_TYPE):
     event_id = str(len(events) + 1)
     events[event_id] = data
 
-    msg = await context.bot.send_message(
+    await context.bot.send_message(
         chat_id=GROUP_ID,
         text=build_text(data),
         reply_markup=keyboard(event_id)
     )
 
-    events[event_id]["message_id"] = msg.message_id
-
     del pending[user.id]
 
-    await update.message.reply_text("✅ Uscita pubblicata nel gruppo!")
+    await update.message.reply_text("✅ Uscita pubblicata!")
     return ConversationHandler.END
 
 
-# ---------------- BOTTONI ---------------- #
+# ---------------- CALLBACK BUTTONS ---------------- #
 
 async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -192,47 +219,45 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if action == "cancel":
         if user_id != event["creator_id"]:
-            await q.answer("Solo il creatore può annullare", show_alert=True)
+            await q.answer("Solo creatore", show_alert=True)
             return
 
-        await q.edit_message_text("🚫 USCITA ANNULLATA")
+        await q.edit_message_text("🚫 ANNULLATO")
         del events[event_id]
 
     elif action == "full":
         if user_id != event["creator_id"]:
-            await q.answer("Solo il creatore può chiudere", show_alert=True)
+            await q.answer("Solo creatore", show_alert=True)
             return
 
-        await q.edit_message_text("🔴 USCITA AL COMPLETO")
+        await q.edit_message_text("🔴 AL COMPLETO")
 
 
 # ---------------- MAIN ---------------- #
 
-async def post_init(app):
-    await app.bot.delete_webhook(drop_pending_updates=True)
-
 def main():
-    app = Application.builder().token(TOKEN).post_init(post_init).build()
+    app = Application.builder().token(TOKEN).build()
 
     conv = ConversationHandler(
         entry_points=[CommandHandler("uscita", uscita)],
         states={
             LUOGO: [MessageHandler(filters.TEXT & ~filters.COMMAND, luogo)],
+            REGIONE: [CallbackQueryHandler(regione)],
             DATA: [MessageHandler(filters.TEXT & ~filters.COMMAND, data)],
             TIPO: [CallbackQueryHandler(tipo)],
             LIVELLO: [MessageHandler(filters.TEXT & ~filters.COMMAND, livello)],
             POSTI: [MessageHandler(filters.TEXT & ~filters.COMMAND, posti)],
         },
-        fallbacks=[],
+        fallbacks=[]
     )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(buttons))
-    app.add_handler(CommandHandler("chatid", get_chat_id))
 
     print("BOT RUNNING...")
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
