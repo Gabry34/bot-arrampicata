@@ -198,9 +198,6 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await q.edit_message_text("🔴 USCITA AL COMPLETO")
 
-async def start(update, context):
-    print("START COMMAND RECEIVED")
-    await update.message.reply_text("OK FUNZIONO")
 
 # ---------------- MAIN ---------------- #
 
