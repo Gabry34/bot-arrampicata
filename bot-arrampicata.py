@@ -37,6 +37,9 @@ LUOGO, DATA, TIPO, LIVELLO, POSTI = range(5)
 
 
 # ---------------- UTILS ---------------- #
+async def get_chat_id(update, context):
+    chat_id = update.effective_chat.id
+    await update.message.reply_text(f"Chat ID: {chat_id}")
 
 def check_date(date_str):
     try:
@@ -48,7 +51,7 @@ def check_date(date_str):
 
 def build_text(e):
     return (
-        f"ID Richiesta: {''.join(random.choices(string.digits, k=5))}"
+        f"ID Richiesta: {''.join(random.choices(string.digits, k=5))}\n"
         f"🧗 NUOVA USCITA\n\n"
         f"📍 {e['luogo']}\n"
         f"📅 {e['data']}\n"
@@ -226,6 +229,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(buttons))
+    app.add_handler(CommandHandler("chatid", get_chat_id))
 
     print("BOT RUNNING...")
     app.run_polling()
