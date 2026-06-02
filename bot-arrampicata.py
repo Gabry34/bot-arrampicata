@@ -224,7 +224,7 @@ def main():
     app.add_handler(CallbackQueryHandler(buttons))
 
     print("BOT RUNNING...")
-    app.run_polling()
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
