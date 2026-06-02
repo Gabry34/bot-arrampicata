@@ -17,11 +17,11 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+
+TOKEN = os.environ.get("BOT_TOKEN")
 if not TOKEN:
     print("❌ BOT_TOKEN non trovato nelle variabili ambiente!")
     exit()
-
-TOKEN = os.environ.get("BOT_TOKEN")
 
 print("TOKEN:", TOKEN)
 GROUP_ID = -1003960275515  # ID del gruppo
