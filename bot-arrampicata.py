@@ -216,23 +216,15 @@ def main():
             LIVELLO: [MessageHandler(filters.TEXT & ~filters.COMMAND, livello)],
             POSTI: [MessageHandler(filters.TEXT & ~filters.COMMAND, posti)],
         },
-        fallbacks=[]
+        fallbacks=[],
     )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(buttons))
 
-    import asyncio
-
-    async def run():
-        await app.initialize()
-        await app.start()
-        await app.updater.start_polling()
-        await app.updater.idle()
-
-    if __name__ == "__main__":
-        asyncio.run(run())
+    print("BOT RUNNING...")
+    app.run_polling()
 
 
 if __name__ == "__main__":
