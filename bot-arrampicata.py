@@ -204,8 +204,11 @@ async def start(update, context):
 
 # ---------------- MAIN ---------------- #
 
+async def post_init(app):
+    await app.bot.delete_webhook(drop_pending_updates=True)
+
 def main():
-    app = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(TOKEN).post_init(post_init).build()
 
     conv = ConversationHandler(
         entry_points=[CommandHandler("uscita", uscita)],
@@ -224,11 +227,7 @@ def main():
     app.add_handler(CallbackQueryHandler(buttons))
 
     print("BOT RUNNING...")
-    app = Application.builder().token(TOKEN).build()
-
-    app.bot.delete_webhook(drop_pending_updates=True)
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
-
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
