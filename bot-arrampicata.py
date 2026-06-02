@@ -220,12 +220,7 @@ def main():
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(buttons))
 
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=10000,
-        url_path=TOKEN,
-        webhook_url=f"https://bot-arrampicata.onrender.com/{TOKEN}"
-    )
+    app.run_polling()
 
 
 if __name__ == "__main__":
