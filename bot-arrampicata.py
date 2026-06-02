@@ -84,10 +84,6 @@ TIPO_KEYBOARD = InlineKeyboardMarkup([
         InlineKeyboardButton("🟤 Boulder",    callback_data="tip_Boulder"),
         InlineKeyboardButton("🏠 Indoor",     callback_data="tip_Indoor"),
     ],
-    [
-        InlineKeyboardButton("🧊 Ghiaccio",   callback_data="tip_Ghiaccio"),
-        InlineKeyboardButton("🪢 Via Ferrata", callback_data="tip_ViaFerrata"),
-    ],
 ])
 
 # ---------------- TESTO MESSAGGIO ---------------- #
