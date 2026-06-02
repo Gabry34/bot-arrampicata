@@ -1,6 +1,8 @@
 
 import re
 import os
+import random
+import string
 from datetime import datetime
 
 from telegram import (
@@ -46,13 +48,15 @@ def check_date(date_str):
 
 def build_text(e):
     return (
-        "🧗 NUOVA USCITA\n\n"
+        f"ID Richiesta: {''.join(random.choices(string.digits, k=5))}"
+        f"🧗 NUOVA USCITA\n\n"
         f"📍 {e['luogo']}\n"
         f"📅 {e['data']}\n"
         f"🧗 {e['tipo']}\n"
         f"📈 {e['livello']}\n"
         f"👥 {e['posti']} posti\n\n"
         f"👤 Organizzatore: {e['creator_name']}"
+        f"⚠️ Contatta l`organizzatore dell`attività per richiedere di partecipare all`uscita."
     )
 
 
