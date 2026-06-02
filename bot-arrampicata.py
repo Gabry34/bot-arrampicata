@@ -224,6 +224,9 @@ def main():
     app.add_handler(CallbackQueryHandler(buttons))
 
     print("BOT RUNNING...")
+    app = Application.builder().token(TOKEN).build()
+
+    app.bot.delete_webhook(drop_pending_updates=True)
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
