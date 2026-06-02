@@ -198,6 +198,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await q.edit_message_text("🔴 USCITA AL COMPLETO")
 
+async def start(update, context):
+    print("START COMMAND RECEIVED")
+    await update.message.reply_text("OK FUNZIONO")
 
 # ---------------- MAIN ---------------- #
 
@@ -220,7 +223,16 @@ def main():
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(buttons))
 
-    app.run_polling()
+    import asyncio
+
+    async def run():
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling()
+        await app.updater.idle()
+
+    if __name__ == "__main__":
+        asyncio.run(run())
 
 
 if __name__ == "__main__":
