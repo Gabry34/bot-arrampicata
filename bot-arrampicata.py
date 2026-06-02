@@ -106,8 +106,11 @@ def keyboard(event_id):
             InlineKeyboardButton("❌ Esci",      callback_data=f"leave_{event_id}"),
         ],
         [
-            InlineKeyboardButton("✏️ Aggiorna posti",  callback_data=f"update_{event_id}"),
-            InlineKeyboardButton("🗑 Cancella uscita", callback_data=f"delete_{event_id}"),
+            InlineKeyboardButton("✏️ Aggiorna posti",       callback_data=f"update_{event_id}"),
+            InlineKeyboardButton("🗑 Cancella uscita",      callback_data=f"delete_{event_id}"),
+        ],
+        [
+            InlineKeyboardButton("👥 Gestisci partecipanti", callback_data=f"manage_{event_id}"),
         ],
     ])
 
@@ -374,6 +377,107 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == "nodelete":
         await q.message.reply_text("Operazione annullata.")
 
+    # GESTISCI PARTECIPANTI (solo creator, in privato)
+    elif action == "manage":
+        if user.id != event["creator_id"]:
+            await q.answer("Solo il creatore può gestire i partecipanti.", show_alert=True)
+            return
+
+        if not event["partecipanti"]:
+            await q.answer("Nessun partecipante da rimuovere.", show_alert=True)
+            return
+
+        righe = []
+        for p in event["partecipanti"]:
+            nome = p["name"] + (f" (@{p['username']})" if p["username"] else "")
+            righe.append([
+                InlineKeyboardButton(
+                    f"🚫 Rimuovi {p['name']}",
+                    callback_data=f"kick_{event_id}_{p['id']}"
+                )
+            ])
+
+        kb = InlineKeyboardMarkup(righe)
+        try:
+            await context.bot.send_message(
+                chat_id=user.id,
+                text=f"👥 Partecipanti uscita {event['luogo']} ({event['data']}):\nScegli chi rimuovere:",
+                reply_markup=kb,
+            )
+            await q.answer("Ti ho inviato la lista in privato.", show_alert=True)
+        except Exception:
+            await q.answer(
+                "Non riesco a scriverti in privato. Avvia prima una chat con me.",
+                show_alert=True
+            )
+
+# ---------------- KICK PARTECIPANTE ---------------- #
+
+async def kick_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Gestisce kick_{event_id}_{target_id}, confirmkick_{event_id}_{target_id}, cancelkick_{...}"""
+    q = update.callback_query
+    await q.answer()
+
+    raw = q.data  # es. "kick_3_456789"
+    parts = raw.split("_", 2)  # ["kick", "3", "456789"]
+    if len(parts) != 3:
+        return
+
+    action, event_id, target_id_str = parts
+    target_id = int(target_id_str)
+    event = events.get(event_id)
+
+    if not event:
+        await q.edit_message_text("Uscita non trovata o già cancellata.")
+        return
+
+    if q.from_user.id != event["creator_id"]:
+        await q.answer("Solo il creatore può rimuovere partecipanti.", show_alert=True)
+        return
+
+    target = next((p for p in event["partecipanti"] if p["id"] == target_id), None)
+
+    if action == "kick":
+        if not target:
+            await q.edit_message_text("Partecipante non trovato (forse si è già tolto).")
+            return
+        nome = target["name"] + (f" (@{target['username']})" if target["username"] else "")
+        kb = InlineKeyboardMarkup([[
+            InlineKeyboardButton("✅ Sì, rimuovi", callback_data=f"confirmkick_{event_id}_{target_id}"),
+            InlineKeyboardButton("↩️ Annulla",    callback_data=f"cancelkick_{event_id}_{target_id}"),
+        ]])
+        await q.edit_message_text(
+            f"Vuoi rimuovere {nome} dall'uscita a {event['luogo']} ({event['data']})?",
+            reply_markup=kb,
+        )
+
+    elif action == "confirmkick":
+        if not target:
+            await q.edit_message_text("Partecipante non trovato (forse si è già tolto).")
+            return
+        nome = target["name"] + (f" (@{target['username']})" if target["username"] else "")
+        event["partecipanti"] = [p for p in event["partecipanti"] if p["id"] != target_id]
+
+        # Aggiorna messaggio nel gruppo
+        await refresh_message(context, event_id)
+
+        # Notifica all'utente rimosso
+        try:
+            await context.bot.send_message(
+                chat_id=target_id,
+                text=(
+                    f"⚠️ Sei stato rimosso dall'uscita a {event['luogo']} ({event['data']}) "
+                    f"dall'organizzatore."
+                ),
+            )
+        except Exception:
+            pass
+
+        await q.edit_message_text(f"✅ {nome} rimosso dall'uscita.")
+
+    elif action == "cancelkick":
+        await q.edit_message_text("Operazione annullata.")
+
 # ---------------- AGGIORNAMENTO POSTI (messaggio libero) ---------------- #
 
 async def update_posti(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -426,6 +530,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("mieuscite", mie_uscite))
     app.add_handler(conv)
+    app.add_handler(CallbackQueryHandler(kick_buttons, pattern=r"^(kick|confirmkick|cancelkick)_"))
     app.add_handler(CallbackQueryHandler(buttons))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, update_posti))
 
