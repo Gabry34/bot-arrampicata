@@ -34,24 +34,44 @@ LUOGO, REGIONE, DATA, TIPO, LIVELLO, POSTI = range(6)
 
 REGIONI_KEYBOARD = InlineKeyboardMarkup([
     [
-        InlineKeyboardButton("Trentino-Alto Adige", callback_data="reg_Trentino-Alto Adige"),
-        InlineKeyboardButton("Lombardia",           callback_data="reg_Lombardia"),
+        InlineKeyboardButton("Trentino-Alto Adige", callback_data="reg_Trentino-Alto_Adige"),
+        InlineKeyboardButton("Lombardia", callback_data="reg_Lombardia"),
     ],
     [
-        InlineKeyboardButton("Veneto",    callback_data="reg_Veneto"),
-        InlineKeyboardButton("Piemonte",  callback_data="reg_Piemonte"),
+        InlineKeyboardButton("Veneto", callback_data="reg_Veneto"),
+        InlineKeyboardButton("Piemonte", callback_data="reg_Piemonte"),
     ],
     [
-        InlineKeyboardButton("Toscana",   callback_data="reg_Toscana"),
-        InlineKeyboardButton("Lazio",     callback_data="reg_Lazio"),
+        InlineKeyboardButton("Toscana", callback_data="reg_Toscana"),
+        InlineKeyboardButton("Lazio", callback_data="reg_Lazio"),
     ],
     [
-        InlineKeyboardButton("Campania",  callback_data="reg_Campania"),
-        InlineKeyboardButton("Sicilia",   callback_data="reg_Sicilia"),
+        InlineKeyboardButton("Campania", callback_data="reg_Campania"),
+        InlineKeyboardButton("Sicilia", callback_data="reg_Sicilia"),
     ],
     [
-        InlineKeyboardButton("Sardegna",  callback_data="reg_Sardegna"),
-        InlineKeyboardButton("Liguria",   callback_data="reg_Liguria"),
+        InlineKeyboardButton("Sardegna", callback_data="reg_Sardegna"),
+        InlineKeyboardButton("Liguria", callback_data="reg_Liguria"),
+    ],
+    [
+        InlineKeyboardButton("Emilia-Romagna", callback_data="reg_Emilia_Romagna"),
+        InlineKeyboardButton("Friuli Venezia Giulia", callback_data="reg_Friuli_Venezia_Giulia"),
+    ],
+    [
+        InlineKeyboardButton("Marche", callback_data="reg_Marche"),
+        InlineKeyboardButton("Abruzzo", callback_data="reg_Abruzzo"),
+    ],
+    [
+        InlineKeyboardButton("Molise", callback_data="reg_Molise"),
+        InlineKeyboardButton("Puglia", callback_data="reg_Puglia"),
+    ],
+    [
+        InlineKeyboardButton("Basilicata", callback_data="reg_Basilicata"),
+        InlineKeyboardButton("Calabria", callback_data="reg_Calabria"),
+    ],
+    [
+        InlineKeyboardButton("Umbria", callback_data="reg_Umbria"),
+        InlineKeyboardButton("Valle d'Aosta", callback_data="reg_Valle_d_Aosta"),
     ],
 ])
 
